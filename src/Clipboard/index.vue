@@ -24,6 +24,7 @@ const searchInputRef = ref<HTMLInputElement | null>(null)
 const viewType = ref<'all' | 'text' | 'image' | 'favorites'>('all')
 const selectedId = ref<string | null>(items.value[0]?.id ?? null)
 const itemRefs = ref<Record<string, HTMLElement | null>>({})
+const previewTextRef = ref<HTMLElement | null>(null)
 const noteEditingId = ref<string | null>(null)
 const noteDraft = ref('')
 const noteTextareaRef = ref<HTMLTextAreaElement | null>(null)
@@ -327,6 +328,13 @@ function handleKeydown(event: KeyboardEvent) {
 
   if (tag === 'input' || tag === 'textarea') return
 
+  // Ctrl+A 时仅选中预览区文本，避免全局全选干扰
+  if (event.ctrlKey && keyLower === 'a') {
+    event.preventDefault()
+    selectPreviewText()
+    return
+  }
+
   if ((event.ctrlKey || event.metaKey) && keyLower === 'f') {
     event.preventDefault()
     searchInputRef.value?.focus()
@@ -371,6 +379,19 @@ function handleKeydown(event: KeyboardEvent) {
       event.preventDefault()
     }
   }
+}
+
+function selectPreviewText() {
+  // 仅在选中文本条目时执行选取，防止图片预览或空选中
+  if (!selectedItem.value || selectedItem.value.type !== 'text') return
+  const el = previewTextRef.value
+  if (!el) return
+  const selection = window.getSelection()
+  if (!selection) return
+  const range = document.createRange()
+  range.selectNodeContents(el)
+  selection.removeAllRanges()
+  selection.addRange(range)
 }
 
 function moveSelection(direction: 1 | -1) {
@@ -545,7 +566,7 @@ function shorten(text: string, limit = 120) {
     <div class="clipboard-status">
       <span v-if="statusMsg" class="ok">{{ statusMsg }}</span>
       <span v-if="errorMsg" class="err">{{ errorMsg }}</span>
-      <span class="hint">自动轮询剪贴板，每 3 秒同步一次。</span>
+      <!-- <span class="hint">自动轮询剪贴板，每 3 秒同步一次。</span> -->
     </div>
 
     <div class="clipboard-body">
@@ -596,13 +617,13 @@ function shorten(text: string, limit = 120) {
       <div v-else class="empty">暂无记录，点击“记录当前剪贴板”开始收集。</div>
 
       <div class="clipboard-preview" v-if="selectedItem">
-        <div class="preview-head">
-          <div class="pill">{{ selectedItem.type === 'text' ? 'TEXT' : 'IMAGE' }}</div>
-          <div class="time">创建：{{ formatTime(selectedItem.createdAt) }}</div>
-        </div>
-        <div class="preview-body" v-if="selectedItem.type === 'text'">
-          <pre>{{ selectedItem.content }}</pre>
-        </div>
+      <div class="preview-head">
+        <div class="pill">{{ selectedItem.type === 'text' ? 'TEXT' : 'IMAGE' }}</div>
+        <div class="time">创建：{{ formatTime(selectedItem.createdAt) }}</div>
+      </div>
+      <div class="preview-body" v-if="selectedItem.type === 'text'" ref="previewTextRef">
+        <pre>{{ selectedItem.content }}</pre>
+      </div>
         <div class="preview-body img" v-else>
           <img :src="selectedItem.content" alt="剪贴板图片预览" />
         </div>
