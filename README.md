@@ -40,5 +40,3 @@ npm run build
 - 开发：`npm run dev`
 - 构建：`npm run build`
 
-## 许可证
-未在仓库中声明许可证，请在发布前补充合适的开源协议或内部使用声明。
