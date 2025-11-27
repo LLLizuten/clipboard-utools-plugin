@@ -316,6 +316,7 @@ async function copyItem(item: ClipEntry, shouldExit = false) {
   }
 }
 
+// 快捷键处理
 function handleKeydown(event: KeyboardEvent) {
   const target = event.target as HTMLElement | null
   const tag = target?.tagName?.toLowerCase()
@@ -393,7 +394,7 @@ function selectPreviewText() {
   selection.removeAllRanges()
   selection.addRange(range)
 }
-
+// 上下滚动
 function moveSelection(direction: 1 | -1) {
   if (!filteredItems.value.length) return
   const currentIndex = filteredItems.value.findIndex((item) => item.id === selectedId.value)
@@ -401,6 +402,7 @@ function moveSelection(direction: 1 | -1) {
   selectedId.value = filteredItems.value[nextIndex].id
 }
 
+// 页签切换
 function shiftTab(direction: 1 | -1) {
   const modes: Array<'all' | 'text' | 'image' | 'favorites'> = ['all', 'text', 'image', 'favorites']
   const idx = modes.indexOf(viewType.value)
