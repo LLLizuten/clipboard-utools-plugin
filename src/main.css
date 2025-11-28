@@ -284,10 +284,6 @@ button {
   background: var(--amber-50);
 }
 
-.clip-card.favorited {
-  border-color: rgba(248, 192, 69, 0.6);
-}
-
 .card-head {
   display: flex;
   align-items: center;
