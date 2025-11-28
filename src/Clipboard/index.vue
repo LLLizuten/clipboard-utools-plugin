@@ -573,128 +573,163 @@ function shorten(text: string, limit = 120) {
 </script>
 
 <template>
-  <div class="clipboard">
-    <div class="clipboard-toolbar">
-      <div class="toolbar-left">
-        <input
-          ref="searchInputRef"
-          v-model.trim="searchText"
-          class="input"
-          type="text"
-          placeholder="搜索内容或备注 (Ctrl/Cmd+F)"
-        />
-        <div class="tabs">
+  <div class="clipboard-page">
+    <div class="clipboard-shell">
+      <section class="headline-card">
+        <div class="headline-left">
+          <div class="logo-mark">CL</div>
+          <div class="headline-text">
+            <div class="headline-title">剪贴板管理器</div>
+            <div class="headline-subtitle">共 {{ items.length }} 条记录 · 自动同步中</div>
+          </div>
+        </div>
+        <div class="headline-actions">
+          <button class="btn ghost" :disabled="isCapturing" @click="captureClipboard()">
+            {{ isCapturing ? '读取中…' : '记录当前剪贴板' }}
+          </button>
+        </div>
+      </section>
+
+      <section class="controls-row">
+        <div class="category-tabs">
           <button
-            class="tab"
+            class="tab-chip"
             :class="{ active: viewType === 'all' }"
             @click="viewType = 'all'"
           >
-            全部 ({{ items.length }})
+            <span class="chip-icon">▦</span>
+            全部
+            <span class="chip-badge">{{ items.length }}</span>
           </button>
           <button
-            class="tab"
+            class="tab-chip"
             :class="{ active: viewType === 'text' }"
             @click="viewType = 'text'"
           >
-            文本 ({{ items.filter((i) => i.type === 'text').length }})
+            <span class="chip-icon">文</span>
+            文本
+            <span class="chip-badge">{{ items.filter((i) => i.type === 'text').length }}</span>
           </button>
           <button
-            class="tab"
+            class="tab-chip"
             :class="{ active: viewType === 'image' }"
             @click="viewType = 'image'"
           >
-            图片 ({{ items.filter((i) => i.type === 'image').length }})
+            <span class="chip-icon">图</span>
+            图片
+            <span class="chip-badge">{{ items.filter((i) => i.type === 'image').length }}</span>
           </button>
           <button
-            class="tab"
+            class="tab-chip"
             :class="{ active: viewType === 'favorites' }"
             @click="viewType = 'favorites'"
             title="仅显示收藏"
           >
-            收藏 ({{ items.filter((i) => i.favorited).length }})
+            <span class="chip-icon">★</span>
+            收藏
+            <span class="chip-badge">{{ items.filter((i) => i.favorited).length }}</span>
           </button>
         </div>
-      </div>
-      <div class="toolbar-actions">
-        <button class="ghost" :disabled="isCapturing" @click="captureClipboard()">
-          {{ isCapturing ? '读取中…' : '记录当前剪贴板' }}
-        </button>
-      </div>
-    </div>
 
-    <div class="clipboard-status">
-      <span v-if="statusMsg" class="ok">{{ statusMsg }}</span>
-      <span v-if="errorMsg" class="err">{{ errorMsg }}</span>
-      <!-- <span class="hint">自动轮询剪贴板，每 3 秒同步一次。</span> -->
-    </div>
+        <label class="search-box">
+          <span class="search-icon">⌕</span>
+          <input
+            ref="searchInputRef"
+            v-model.trim="searchText"
+            class="search-input"
+            type="text"
+            placeholder="搜索内容或备注 (Ctrl/Cmd+F)"
+          />
+        </label>
+      </section>
 
-    <div class="clipboard-body">
-      <div class="clipboard-list" v-if="filteredItems.length">
-        <div
-          v-for="item in filteredItems"
-          :key="item.id"
-          class="clipboard-item"
-          :class="{
-            selected: selectedItem?.id === item.id,
-            pinned: item.pinned,
-            favorited: item.favorited,
-            'type-text': item.type === 'text',
-            'type-image': item.type === 'image'
-          }"
-          :ref="(el) => setItemRef(item.id, el)"
-          @click="selectedId = item.id"
-          @dblclick.stop="copyItem(item, true)"
-        >
-          <div class="item-meta">
-            <span class="pill">{{ item.type === 'text' ? 'T' : 'IMG' }}</span>
-            <span class="time">{{ formatTime(item.updatedAt) }}</span>
-            <span v-if="item.pinned" class="badge">Pinned</span>
-            <span v-if="item.favorited" class="badge fav">Fav</span>
-          </div>
-          <div class="item-content">
-            <template v-if="item.type === 'text'">
-              <div class="text-preview">{{ shorten(item.content) }}</div>
-            </template>
-            <template v-else>
-              <img class="thumb" :src="item.content" alt="剪贴板图片" />
-            </template>
-            <div v-if="item.favoriteNote !== undefined" class="note">备注：{{ item.favoriteNote || '（空）' }}</div>
-          </div>
-          <div class="item-actions">
-            <button class="ghost" @click.stop="copyItem(item)">复制</button>
-            <button class="ghost" @click.stop="togglePin(item)">
-              {{ item.pinned ? '取消固定' : '固定' }}
-            </button>
-            <button class="ghost" @click.stop="toggleFavorite(item)">
-              {{ item.favorited ? '取消收藏' : '收藏' }}
-            </button>
-            <button class="ghost" @click.stop="startEditNote(item)">备注</button>
-            <button class="ghost danger" @click.stop="removeItem(item.id)">删除</button>
+      <div class="status-line">
+        <span v-if="statusMsg" class="status ok">{{ statusMsg }}</span>
+        <span v-if="errorMsg" class="status err">{{ errorMsg }}</span>
+      </div>
+
+      <section class="content-grid">
+        <div class="list-panel" v-if="filteredItems.length">
+          <div
+            v-for="item in filteredItems"
+            :key="item.id"
+            class="clip-card"
+            :class="{
+              selected: selectedItem?.id === item.id,
+              pinned: item.pinned,
+              favorited: item.favorited,
+              'type-text': item.type === 'text',
+              'type-image': item.type === 'image'
+            }"
+            :ref="(el) => setItemRef(item.id, el)"
+            @click="selectedId = item.id"
+            @dblclick.stop="copyItem(item, true)"
+          >
+            <div class="card-head">
+              <div class="tag type">
+                <span class="tag-icon">{{ item.type === 'text' ? 'T' : 'IMG' }}</span>
+                <span>{{ item.type === 'text' ? '文本' : '图片' }}</span>
+              </div>
+              <div class="tag pinned" v-if="item.pinned">已固定</div>
+              <div class="tag favorite" v-if="item.favorited">已收藏</div>
+              <div class="time-stamp">{{ formatTime(item.updatedAt) }}</div>
+            </div>
+
+            <div v-if="item.favoriteNote !== undefined" class="note-block">
+              <span class="note-icon">✎</span>
+              <span class="note-text">{{ item.favoriteNote || '（空）' }}</span>
+            </div>
+
+            <div class="card-body">
+              <template v-if="item.type === 'text'">
+                <div class="text-preview">{{ shorten(item.content) }}</div>
+              </template>
+              <template v-else>
+                <img class="thumb" :src="item.content" alt="剪贴板图片" />
+              </template>
+            </div>
+
+            <div class="card-actions">
+              <button class="icon-btn primary" @click.stop="copyItem(item)">复制</button>
+              <button class="icon-btn amber" @click.stop="togglePin(item)">
+                {{ item.pinned ? '取消固定' : '固定' }}
+              </button>
+              <button class="icon-btn rose" @click.stop="toggleFavorite(item)">
+                {{ item.favorited ? '取消收藏' : '收藏' }}
+              </button>
+              <button class="icon-btn blue" @click.stop="startEditNote(item)">备注</button>
+              <button class="icon-btn danger" @click.stop="removeItem(item.id)">删除</button>
+            </div>
           </div>
         </div>
-      </div>
-      <div v-else class="empty">暂无记录，点击“记录当前剪贴板”开始收集。</div>
+        <div v-else class="empty-card">暂无记录，点击“记录当前剪贴板”开始收集。</div>
 
-      <div class="clipboard-preview" v-if="selectedItem">
-      <div class="preview-head">
-        <div class="pill">{{ selectedItem.type === 'text' ? 'TEXT' : 'IMAGE' }}</div>
-        <div class="time">创建：{{ formatTime(selectedItem.createdAt) }}</div>
-      </div>
-      <div class="preview-body" v-if="selectedItem.type === 'text'" ref="previewTextRef">
-        <pre>{{ selectedItem.content }}</pre>
-      </div>
-        <div class="preview-body img" v-else>
-          <img :src="selectedItem.content" alt="剪贴板图片预览" />
+        <div class="preview-panel" v-if="selectedItem">
+          <div class="preview-head">
+            <div class="tag type">
+              <span class="tag-icon">{{ selectedItem.type === 'text' ? 'TEXT' : 'IMAGE' }}</span>
+            </div>
+            <div class="time-stamp">创建：{{ formatTime(selectedItem.createdAt) }}</div>
+          </div>
+          <div class="preview-body" v-if="selectedItem.type === 'text'" ref="previewTextRef">
+            <pre>{{ selectedItem.content }}</pre>
+          </div>
+          <div class="preview-body img" v-else>
+            <img :src="selectedItem.content" alt="剪贴板图片预览" />
+          </div>
+          <div v-if="selectedItem.favoriteNote !== undefined" class="note-block">
+            <span class="note-icon">✎</span>
+            <span class="note-text">{{ selectedItem.favoriteNote || '（空）' }}</span>
+          </div>
         </div>
-        <div v-if="selectedItem.favoriteNote !== undefined" class="note">备注：{{ selectedItem.favoriteNote || '（空）' }}</div>
-      </div>
+      </section>
     </div>
 
     <div v-if="noteEditingId" class="note-dialog-backdrop">
       <div class="note-dialog">
         <div class="note-dialog-head">
           <span>编辑备注</span>
-          <button class="ghost" @click="cancelNoteEdit">✕</button>
+          <button class="icon-btn subtle" @click="cancelNoteEdit">✕</button>
         </div>
         <textarea
           ref="noteTextareaRef"
@@ -704,8 +739,8 @@ function shorten(text: string, limit = 120) {
           @keydown="handleNoteKeydown"
         ></textarea>
         <div class="dialog-actions">
-          <button class="ghost" @click="cancelNoteEdit">取消</button>
-          <button class="ghost" @click="saveNoteEdit">保存</button>
+          <button class="icon-btn subtle" @click="cancelNoteEdit">取消</button>
+          <button class="icon-btn primary" @click="saveNoteEdit">保存</button>
         </div>
       </div>
     </div>
