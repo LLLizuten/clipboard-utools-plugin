@@ -367,7 +367,6 @@ async function copyItem(item: ClipEntry, shouldExit = false) {
       }
     }
     statusMsg.value = '已复制'
-    utoolsApi?.showNotification?.('已复制到剪贴板')
     if (shouldExit) {
       if (utoolsApi?.hideMainWindow) {
         utoolsApi.hideMainWindow()
@@ -724,13 +723,13 @@ function toggleExpand(id: string) {
             <div class="card-body">
               <template v-if="item.type === 'text'">
                 <div class="text-wrapper" :class="{ expanded: isExpanded(item.id) }">
+                  <!-- 使用 v-text 避免 <pre> 继承模板缩进换行，导致 Ctrl+A 时多出空格或空行 -->
                   <pre
                     class="text-preview"
                     :class="{ 'full-text': isExpanded(item.id), collapsed: !isExpanded(item.id) }"
                     :ref="(el) => setTextRef(item.id, el)"
-                  >
-{{ isExpanded(item.id) ? item.content : shorten(item.content, TEXT_PREVIEW_LIMIT) }}
-                  </pre>
+                    v-text="isExpanded(item.id) ? item.content : shorten(item.content, TEXT_PREVIEW_LIMIT)"
+                  ></pre>
                   <div v-if="!isExpanded(item.id) && shouldCollapse(item)" class="expand-mask"></div>
                 </div>
                 <button
