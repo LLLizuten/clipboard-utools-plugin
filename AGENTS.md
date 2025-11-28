@@ -1,8 +1,8 @@
 # Repository Guidelines
 
 ## 项目结构与模块划分
-- 入口：`src/App.vue` 负责根据 uTools 入口 code（`clipboard`/`hello`/`read`/`write`）切换视图，`src/main.js` 完成启动，`src/main.css` 放全局样式。
-- 视图：`src/Clipboard/` 为核心剪贴板界面与逻辑，`src/Read/` 处理文件读取，`src/Write/` 处理写入，`src/Hello/` 为调试入口。
+- 入口：`src/App.vue` 负责根据 uTools 入口 code（`clipboard`/`read`/`write`）切换视图，`src/main.js` 完成启动，`src/main.css` 放全局样式。
+- 视图：`src/Clipboard/` 为核心剪贴板界面与逻辑，`src/Read/` 处理文件读取，`src/Write/` 处理写入。
 - 资源：静态资产放 `public/`，发布产物生成在 `dist/`；配置集中在 `vite.config.js`。
 - 约定：组件文件使用 PascalCase 目录/文件名，通用工具使用 camelCase；新增代码需在模块旁保持清晰注释。
 
