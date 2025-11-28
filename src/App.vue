@@ -1,36 +1,23 @@
 <script lang="ts" setup>
-import { onMounted, ref } from 'vue';
-import Read from './Read/index.vue'
-import Write from './Write/index.vue'
+import { onMounted, ref } from 'vue'
 import Clipboard from './Clipboard/index.vue'
 
-const route = ref('')
-const enterAction = ref({})
+// 当前仅保留剪贴板功能，路由固定为 clipboard，兼容浏览器预览场景
+const route = ref<'clipboard'>('clipboard')
 
 onMounted(() => {
   if (window.utools) {
+    // 仍监听插件进入，未来若扩展其他入口可在此添加分支
     window.utools.onPluginEnter((action) => {
-      route.value = action.code
-      enterAction.value = action
+      route.value = action.code as 'clipboard'
     })
-    window.utools.onPluginOut((isKill) => {
-      route.value = ''
+    window.utools.onPluginOut(() => {
+      route.value = 'clipboard'
     })
-  } else {
-    // Fallback for browser dev preview
-    route.value = 'clipboard'
   }
 })
 </script>
 
 <template>
-  <template v-if="route === 'clipboard' || route === ''">
-    <Clipboard></Clipboard>
-  </template>
-  <template v-if="route === 'read'">
-    <Read :enterAction="enterAction"></Read>
-  </template>
-  <template v-if="route === 'write'">
-    <Write :enterAction="enterAction"></Write>
-  </template>
+  <Clipboard v-if="route === 'clipboard'" />
 </template>
