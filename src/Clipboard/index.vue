@@ -201,9 +201,16 @@ function uuid() {
 }
 
 function compactItems() {
+  // 优先级：置顶 > 收藏 > 其他，确保超过 200 条时收藏优先保留（未强行置顶收藏）。
   const pinned = items.value.filter((item) => item.pinned)
-  const rest = items.value.filter((item) => !item.pinned).slice(0, Math.max(0, MAX_ITEMS - pinned.length))
-  items.value = [...pinned, ...rest]
+  const favorited = items.value.filter((item) => item.favorited && !item.pinned)
+  const others = items.value.filter((item) => !item.pinned && !item.favorited)
+  // 计算剩余额度，按优先级顺序截取，避免超过 MAX_ITEMS
+  const afterPinnedQuota = Math.max(0, MAX_ITEMS - pinned.length)
+  const afterFavoriteQuota = Math.max(0, afterPinnedQuota - favorited.length)
+  const keptFavorites = favorited.slice(0, afterPinnedQuota)
+  const keptOthers = others.slice(0, afterFavoriteQuota)
+  items.value = [...pinned, ...keptFavorites, ...keptOthers]
 }
 
 function addOrUpdateItem(entry: { type: ClipType; content: string }) {
@@ -433,12 +440,12 @@ function handleKeydown(event: KeyboardEvent) {
       togglePin(selectedItem.value)
       event.preventDefault()
     }
-  } else if (event.altKey && keyLower === 'f') {
+  } else if (event.altKey && keyLower === 'f') {// 收藏 alt + f
     if (selectedItem.value) {
       toggleFavorite(selectedItem.value)
       event.preventDefault()
     }
-  } else if (keyLower === 'e') {
+  } else if (keyLower === 'e') {// 备注 e
     if (selectedItem.value) {
       startEditNote(selectedItem.value)
       event.preventDefault()
