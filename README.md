@@ -8,7 +8,6 @@
 - 收藏与备注：支持收藏/取消收藏，为条目添加备注并按收藏时间排序查看。
 - 固定与删除：固定条目置顶显示，支持单条删除，状态持久化到 `utools.dbStorage` 与 `localStorage`。
 - 快捷操作：回车或双击复制，Ctrl/Cmd+F 聚焦搜索，左右键切换标签，Alt+P 固定，Alt+F 收藏，E 编辑备注，Delete 删除，方向键切换选中。
-- 额外入口：`hello` 展示入参调试；`read` 读取文件内容；`write` 根据拖拽/粘贴的文本或图片写入文件并在资源管理器中定位。
 
 ## 目录结构
 - `src/App.vue`：根据 uTools 入口 code (`clipboard`/`hello`/`read`/`write`) 切换视图。
