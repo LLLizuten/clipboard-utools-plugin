@@ -17,6 +17,9 @@ interface ClipEntry {
 
 const STORAGE_KEY = 'clipboard_items'
 const MAX_ITEMS = 200
+// 文本卡片默认截断长度与行数上限，超出后提供“展开全部”交互
+const TEXT_PREVIEW_LIMIT = 240
+const TEXT_PREVIEW_LINES = 6
 
 const items = ref<ClipEntry[]>(loadItems())
 const searchText = ref('')
@@ -25,6 +28,9 @@ const viewType = ref<'all' | 'text' | 'image' | 'favorites'>('all')
 const selectedId = ref<string | null>(items.value[0]?.id ?? null)
 const itemRefs = ref<Record<string, HTMLElement | null>>({})
 const previewTextRef = ref<HTMLElement | null>(null)
+const textRefs = ref<Record<string, HTMLElement | null>>({})
+// 记录每条文本是否已展开，键为条目 id，布尔表示展开/折叠
+const expandedMap = ref<Record<string, boolean>>({})
 const noteEditingId = ref<string | null>(null)
 const noteDraft = ref('')
 const noteTextareaRef = ref<HTMLTextAreaElement | null>(null)
@@ -92,6 +98,8 @@ watch(
 )
 
 watch(selectedId, () => {
+  // 选中项切换时同步当前卡片的文本节点，便于 Ctrl+A 选中正文
+  previewTextRef.value = selectedId.value ? textRefs.value[selectedId.value] ?? null : null
   scrollSelectedIntoView()
 })
 
@@ -544,6 +552,18 @@ function setItemRef(id: string, el: HTMLElement | null) {
   }
 }
 
+// 记录每个文本条目的正文节点，配合 selectedId 更新以支持 Ctrl+A 全选
+function setTextRef(id: string, el: HTMLElement | null) {
+  if (el) {
+    textRefs.value[id] = el
+  } else {
+    delete textRefs.value[id]
+  }
+  if (selectedId.value === id) {
+    previewTextRef.value = el
+  }
+}
+
 function scrollSelectedIntoView() {
   nextTick(() => {
     const id = selectedId.value
@@ -557,6 +577,8 @@ function scrollSelectedIntoView() {
 
 function removeItem(id: string) {
   items.value = items.value.filter((item) => item.id !== id)
+  delete textRefs.value[id]
+  delete expandedMap.value[id]
 }
 
 function formatTime(ts: number) {
@@ -569,6 +591,25 @@ function shorten(text: string, limit = 120) {
   if (!text) return ''
   if (text.length <= limit) return text
   return `${text.slice(0, limit)}…`
+}
+
+// 判断文本是否需要折叠展示，长度或行数任一超限即显示“展开全部”
+function shouldCollapse(item: ClipEntry) {
+  if (item.type !== 'text') return false
+  const text = item.content ?? ''
+  if (text.length > TEXT_PREVIEW_LIMIT) return true
+  const lines = text.split(/\r?\n/)
+  return lines.length > TEXT_PREVIEW_LINES
+}
+
+// 当前条目是否处于展开态
+function isExpanded(id: string) {
+  return !!expandedMap.value[id]
+}
+
+// 展开/收起指定条目正文
+function toggleExpand(id: string) {
+  expandedMap.value[id] = !expandedMap.value[id]
 }
 </script>
 
@@ -682,10 +723,31 @@ function shorten(text: string, limit = 120) {
 
             <div class="card-body">
               <template v-if="item.type === 'text'">
-                <div class="text-preview">{{ shorten(item.content) }}</div>
+                <div class="text-wrapper" :class="{ expanded: isExpanded(item.id) }">
+                  <pre
+                    class="text-preview"
+                    :class="{ 'full-text': isExpanded(item.id), collapsed: !isExpanded(item.id) }"
+                    :ref="(el) => setTextRef(item.id, el)"
+                  >
+{{ isExpanded(item.id) ? item.content : shorten(item.content, TEXT_PREVIEW_LIMIT) }}
+                  </pre>
+                  <div v-if="!isExpanded(item.id) && shouldCollapse(item)" class="expand-mask"></div>
+                </div>
+                <button
+                  v-if="shouldCollapse(item)"
+                  class="expand-btn"
+                  @click.stop="toggleExpand(item.id)"
+                >
+                  {{ isExpanded(item.id) ? '收起' : '展开全部' }}
+                </button>
               </template>
               <template v-else>
-                <img class="thumb" :src="item.content" alt="剪贴板图片" />
+                <img
+                  class="thumb"
+                  :class="{ selected: selectedItem?.id === item.id }"
+                  :src="item.content"
+                  alt="剪贴板图片"
+                />
               </template>
             </div>
 
@@ -703,25 +765,6 @@ function shorten(text: string, limit = 120) {
           </div>
         </div>
         <div v-else class="empty-card">暂无记录，点击“记录当前剪贴板”开始收集。</div>
-
-        <div class="preview-panel" v-if="selectedItem">
-          <div class="preview-head">
-            <div class="tag type">
-              <span class="tag-icon">{{ selectedItem.type === 'text' ? 'TEXT' : 'IMAGE' }}</span>
-            </div>
-            <div class="time-stamp">创建：{{ formatTime(selectedItem.createdAt) }}</div>
-          </div>
-          <div class="preview-body" v-if="selectedItem.type === 'text'" ref="previewTextRef">
-            <pre>{{ selectedItem.content }}</pre>
-          </div>
-          <div class="preview-body img" v-else>
-            <img :src="selectedItem.content" alt="剪贴板图片预览" />
-          </div>
-          <div v-if="selectedItem.favoriteNote !== undefined" class="note-block">
-            <span class="note-icon">✎</span>
-            <span class="note-text">{{ selectedItem.favoriteNote || '（空）' }}</span>
-          </div>
-        </div>
       </section>
     </div>
 
