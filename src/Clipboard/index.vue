@@ -97,7 +97,7 @@ onMounted(() => {
   captureClipboard(true)
   pollTimer = window.setInterval(() => {
     captureClipboard(true)
-  }, 3000)
+  }, 500)
   window.addEventListener('keydown', handleKeydown)
 })
 
@@ -190,6 +190,13 @@ function addOrUpdateItem(entry: { type: ClipType; content: string }) {
   return { added: true, updated: false }
 }
 
+// 主动/轮询读取剪贴板的入口：
+// silent=true 用于轮询场景，只在内容发生变化时更新列表且不展示提示；silent=false 用于用户手动触发，展示状态与错误。
+// 1) 先清空提示状态并在非静默模式下拉起“读取中”状态；
+// 2) 调用 readClipboard() 读取内容，若无内容则在手动模式下提示后返回；
+// 3) 对读取结果生成 hash，静默模式下若与上次一致则跳过，避免重复插入；
+// 4) 新内容会添加或更新时间戳，并更新 status 文案；异常时仅在手动模式展示错误；
+// 5) 最后关闭“读取中”状态（仅手动模式），保持轮询轻量。
 async function captureClipboard(silent = false) {
   errorMsg.value = ''
   statusMsg.value = ''
@@ -219,7 +226,11 @@ async function captureClipboard(silent = false) {
     }
   }
 }
-
+// 读取当前剪贴板内容的统一入口，按优先级尝试不同能力：
+// 1) 优先使用 uTools 的原生 API：先读图片（更容易丢失焦点许可），再读文本；
+// 2) 若 uTools 不可用，则使用标准 Clipboard API 的 read()：遍历条目，优先 image/png，再读取 text/plain；
+// 3) 最后退回到 readText() 兜底，只拿纯文本；
+// 4) 所有步骤失败则返回 null，调用方据此显示提示，不会抛出异常影响轮询。
 async function readClipboard(): Promise<{ type: ClipType; content: string } | null> {
   const utoolsApi = (window as any)?.utools
   try {
