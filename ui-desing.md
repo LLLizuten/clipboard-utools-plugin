@@ -1,62 +1,742 @@
-# 剪贴板 UI 设计文案
+# 剪贴板管理器 UI 设计规范文档
 
-## 设计风格
-- **现代扁平化 2.0（Flat Design 2.0）**
-  - 简洁图形 + 清晰视觉层级
-  - 轻阴影与微渐变，告别纯扁平单调
-  - 圆角矩形贯穿界面，营造柔和友好氛围
+## 📋 项目概览
 
-
-## 核心设计特点
-
-1. ### 渐变色系统
-   - **主色**：Indigo → Purple 渐变，科技感与时尚兼具
-   - **语义色**：
-     - 🟡 **Amber** 置顶/固定
-     - 🔴 **Rose** 收藏/重要
-     - 🔵 **Blue** 备注/信息
-     - 🟢 **Green** 成功/复制
-     - 🔴 **Red** 删除/危险
-
-2. ### 卡片式布局
-   - 每条剪贴板内容为独立卡片
-   - 充足留白 + 清晰边界，扫描更省力
-   - 悬停/选中时阴影 & 边框高亮反馈
-
-3. ### 键盘优先交互
-   - 高频操作全快捷键驱动
-   - 选中态蓝色发光边框，一目了然
-   - 内置快捷键帮助面板，随时唤起
-
-4. ### 微交互设计
-   - 按钮悬停颜色过渡
-   - Toast 即时反馈
-   - 200 ms 平滑过渡动画
-   - 选中项自动滚动至可视区
-
-5. ### 视觉层次（5 层）
-   ```
-   ① 标题区（品牌 + 操作按钮）
-   ② 分类标签（当前选中高亮）
-   ③ 搜索框
-   ④ 内容列表（卡片流）
-   ```
-
-6. ### 状态可视化
-   - 标签/徽章展示：固定、收藏、类型
-   - 图标+文字组合，扫一眼即懂
-   - 颜色编码，快速识别状态
-
-7. ### 响应式间距系统
-   - Tailwind 4 px 基准网格
-   - 合理留白，提升「呼吸感」
-   - max-w-5xl 限制最大宽度，阅读更舒适
+**项目名称**: 剪贴板管理器  
+**设计风格**: 现代扁平化设计 (Flat Design 2.0)  
+**技术栈**: React + Tailwind CSS v4.0  
+**设计工具**: Figma Make  
+**版本**: 1.0.0
 
 ---
 
-## 设计原则
-- **效率优先**：快捷键减少鼠标移动
-- **信息密度适中**：一眼可读，不拥挤
-- **即时反馈**：所有操作均有视觉或提示回应
-- **一致性**：相同交互保持相同样式与位置
-- **渐进式披露**：次要功能可折叠/隐藏，界面始终清爽
+## 🎨 设计理念
+
+### 核心设计思想
+
+1. **效率优先**: 键盘导航为第一优先级，支持完整的快捷键系统
+2. **视觉清晰**: 使用卡片式布局和清晰的视觉层次，便于快速扫描
+3. **即时反馈**: 所有用户操作都提供即时的视觉或通知反馈
+4. **状态可视化**: 通过颜色编码和图标系统直观展示项目状态
+5. **信息密度平衡**: 在展示足够信息的同时保持界面整洁
+
+### 设计风格特点
+
+- **扁平化 + 微阴影**: 避免纯扁平的单调，增加层次感
+- **渐变色点缀**: 在关键元素使用渐变增强视觉吸引力
+- **圆角系统**: 统一使用圆角营造友好感
+- **微交互**: 细腻的悬停效果和过渡动画
+
+---
+
+## 🎨 设计系统
+
+### 1. 色彩系统
+
+#### 主题色
+```css
+/* 主渐变 - 用于品牌标识和主要操作 */
+Primary Gradient: from-indigo-500 to-purple-600
+  - Indigo 500: #6366f1
+  - Purple 600: #9333ea
+  - 使用场景: Logo背景、分类标签选中态、主要按钮
+
+/* 主题色变体 */
+Indigo 400: #818cf8 (Focus边框)
+Indigo 500/20: rgba(99, 102, 241, 0.2) (Focus ring)
+```
+
+#### 功能色（语义化）
+```css
+/* 固定/置顶 */
+Amber 50: #fffbeb (背景)
+Amber 100: #fef3c7 (按钮背景)
+Amber 200: #fde68a (边框)
+Amber 700: #b45309 (文字)
+
+/* 收藏/重要 */
+Rose 50: #fff1f2 (背景)
+Rose 100: #ffe4e6 (按钮背景)
+Rose 200: #fecdd3 (边框)
+Rose 600: #e11d48 (图标)
+Rose 700: #be123c (文字)
+
+/* 备注/信息 */
+Blue 50: #eff6ff (背景)
+Blue 100: #dbeafe (按钮背景)
+Blue 200: #bfdbfe (边框)
+Blue 600: #2563eb (图标)
+Blue 900: #1e3a8a (文字)
+
+/* 成功/复制 */
+Green 50: #f0fdf4 (悬停背景)
+Green 600: #16a34a (图标)
+
+/* 删除/危险 */
+Red 50: #fef2f2 (悬停背景)
+Red 200: #fecaca (边框)
+Red 600: #dc2626 (图标)
+
+/* 中性色 */
+Slate 50: #f8fafc (页面背景起点)
+Slate 100: #f1f5f9 (页面背景终点、标签背景)
+Slate 200: #e2e8f0 (边框)
+Slate 400: #94a3b8 (次要文字)
+Slate 500: #64748b (辅助文字)
+Slate 600: #475569 (按钮文字)
+Slate 700: #334155 (正文)
+Slate 800: #1e293b (标题)
+```
+
+#### 色彩使用规则
+
+| 元素类型 | 颜色方案 | 说明 |
+|---------|---------|------|
+| 页面背景 | gradient from-slate-50 to-slate-100 | 渐变增加空间感 |
+| 卡片背景 | white | 纯白突出内容 |
+| 边框默认 | slate-200 | 柔和不突兀 |
+| 悬停边框 | slate-300 | 轻微变深 |
+| 选中边框 | indigo-500 (2px) | 明确的选中状态 |
+| 标题文字 | slate-800 | 高对比度 |
+| 正文文字 | slate-700 | 舒适阅读 |
+| 次要文字 | slate-500 | 降低视觉权重 |
+| 辅助文字 | slate-400 | 最低优先级 |
+
+### 2. 字体系统
+
+#### 字体族
+```css
+/* 默认字体栈（系统字体） */
+font-family: system-ui, -apple-system, sans-serif;
+
+/* 代码/等宽字体 */
+font-family: ui-monospace, 'Courier New', monospace;
+```
+
+#### 字阶体系
+```css
+/* 继承 /styles/globals.css 的默认设置 */
+h1: 标题 - 用于页面主标题
+h2: 次级标题 - 用于区块标题
+p: 正文 - 用于内容文本
+small: 辅助文字 - 用于提示信息
+
+/* 手动指定的文字大小（仅在必要时使用） */
+text-xs: 0.75rem (12px) - 标签、辅助信息
+text-sm: 0.875rem (14px) - 剪贴板内容、按钮
+```
+
+#### 字体使用规则
+
+| 元素 | 样式 | 场景 |
+|------|------|------|
+| 主标题 | default (h1) | "剪贴板管理器" |
+| 描述文字 | text-slate-500 text-sm | "共 X 条记录" |
+| 标签文字 | text-xs | 类型标签、状态标签 |
+| 剪贴板内容 | text-slate-700 text-sm | 主要内容显示 |
+| 时间戳 | text-xs text-slate-400 | "X分钟前" |
+| 备注内容 | text-sm text-blue-900 | 备注文字 |
+| 按钮文字 | default | 操作按钮 |
+
+### 3. 间距系统
+
+基于 Tailwind 的 4px 基准单位：
+
+```css
+/* 内边距 */
+p-1.5: 6px   - 分类标签容器
+p-2: 8px     - 图标按钮
+p-3: 12px    - 备注容器
+p-4: 16px    - 卡片内边距
+p-6: 24px    - Modal内边距
+
+/* 外边距 */
+mb-2: 8px    - 小间距
+mb-4: 16px   - 中等间距
+mb-6: 24px   - 大间距
+mb-8: 32px   - 顶部区块间距
+
+/* 间隙 */
+gap-1: 4px   - 图标+文字
+gap-2: 8px   - 按钮组、标签组
+gap-3: 12px  - Logo+标题
+gap-4: 16px  - 卡片内主要区块
+
+/* 垂直间距规律 */
+Header section: mb-6
+Category tabs: mb-4
+Search bar: mb-4
+List items: space-y-2 (8px between cards)
+```
+
+### 4. 圆角系统
+
+```css
+rounded-lg: 8px    - 小元素（标签、小按钮）
+rounded-xl: 12px   - 中等元素（卡片、输入框、按钮）
+rounded-2xl: 16px  - 大元素（Logo背景、Modal）
+rounded-full: 50%  - 徽章数字
+```
+
+### 5. 阴影系统
+
+```css
+/* 无阴影 */
+默认状态: 无阴影
+
+/* 悬停阴影 */
+hover:shadow-md
+  - 应用于: 卡片悬停
+  - 效果: 0 4px 6px rgba(0,0,0,0.1)
+
+/* 选中阴影 */
+shadow-lg shadow-indigo-500/20
+  - 应用于: 选中的卡片
+  - 效果: 大阴影 + 主题色光晕
+
+/* 强调阴影 */
+shadow-lg shadow-indigo-500/30
+  - 应用于: Logo、选中的分类标签、主要按钮
+  - 效果: 增强的主题色光晕
+
+/* Modal阴影 */
+shadow-2xl
+  - 应用于: 弹窗
+  - 效果: 0 25px 50px rgba(0,0,0,0.25)
+```
+
+### 6. 动画系统
+
+```css
+/* 过渡时长 */
+transition-all duration-200
+  - 应用于: 所有交互元素
+  - 时长: 200ms
+  - 效果: 平滑但快速的反馈
+
+/* 特殊动画 */
+smooth scroll behavior
+  - 应用于: 键盘导航时的自动滚动
+  - 效果: behavior: 'smooth'
+```
+
+---
+
+## 🧩 组件规范
+
+### 1. Header 组件
+
+#### 结构
+```
+Header
+├── Left Section
+│   ├── Logo (渐变背景圆角方形)
+│   │   └── Clipboard Icon
+│   └── Title & Subtitle
+│       ├── "剪贴板管理器"
+│       └── "共 X 条记录 · 自动同步中"
+└── Right Section
+    ├── Help Button (Info icon)
+    └── Clear All Button (条件渲染)
+```
+
+#### 视觉规范
+- **Logo容器**: w-12 h-12, bg-gradient-to-br from-indigo-500 to-purple-600, rounded-2xl, shadow-lg shadow-indigo-500/30
+- **图标**: w-6 h-6, text-white
+- **主标题**: text-slate-800, 默认字体大小
+- **副标题**: text-slate-500, text-sm, mt-0.5
+- **帮助按钮**: p-2, bg-white, border border-slate-200, rounded-xl
+- **清空按钮**: px-4 py-2, flex items-center gap-2, bg-white, border border-slate-200, rounded-xl
+  - 悬停: hover:bg-red-50 hover:border-red-200 hover:text-red-600
+
+#### 快捷键帮助面板
+- **触发**: 点击 Info 图标
+- **样式**: mt-4, p-4, bg-white, border border-slate-200, rounded-xl, text-sm
+- **布局**: grid grid-cols-2 gap-3
+- **快捷键样式**: kbd 元素 - px-2 py-1 bg-slate-100 rounded
+
+### 2. CategoryTabs 组件
+
+#### 结构
+```
+CategoryTabs
+├── Container (bg-white p-1.5 rounded-xl)
+└── Tab Buttons × 4
+    ├── 全部 (LayoutGrid icon)
+    ├── 文本 (FileText icon)
+    ├── 图片 (Image icon)
+    └── 收藏 (Star icon)
+```
+
+#### 视觉规范
+- **容器**: bg-white, p-1.5, rounded-xl, border border-slate-200
+- **标签按钮**: flex-1, flex items-center justify-center gap-2, px-4 py-2.5, rounded-lg
+- **激活状态**: bg-gradient-to-br from-indigo-500 to-purple-600, text-white, shadow-lg shadow-indigo-500/30
+- **未激活状态**: text-slate-600, hover:bg-slate-50
+- **图标**: w-4 h-4
+- **计数徽章**: px-2 py-0.5, rounded-full, text-xs
+  - 激活: bg-white/20
+  - 未激活: bg-slate-100
+
+#### 交互规范
+- **点击**: 切换分类，重置选中索引
+- **键盘**: ←→ 方向键切换
+- **过渡**: transition-all duration-200
+
+### 3. SearchBar 组件
+
+#### 结构
+```
+SearchBar
+├── Container (relative)
+├── Search Icon (absolute left)
+└── Input Field
+```
+
+#### 视觉规范
+- **图标**: absolute left-4 top-1/2 -translate-y-1/2, w-5 h-5, text-slate-400
+- **输入框**: w-full, pl-12 pr-4 py-3, bg-white, border border-slate-200, rounded-xl
+- **聚焦状态**: focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400
+- **占位符**: "搜索内容或备注... (Ctrl+F)"
+
+#### 交互规范
+- **快捷键**: Ctrl/Cmd+F 聚焦
+- **实时搜索**: 输入即筛选，匹配内容和备注
+- **过渡**: transition-all duration-200
+
+### 4. ClipboardItem 组件
+
+#### 结构层次
+```
+ClipboardItem (Card)
+├── Main Content Area
+│   ├── Header Row
+│   │   ├── Type Badge
+│   │   ├── Pinned Badge (条件)
+│   │   ├── Favorite Badge (条件)
+│   │   └── Timestamp
+│   ├── Note Section (条件)
+│   │   ├── StickyNote Icon
+│   │   └── Note Text
+│   └── Content Area
+│       ├── Text/Image Content
+│       └── Expand Button (条件)
+└── Action Buttons Column
+    ├── Pin Button
+    ├── Favorite Button
+    ├── Note Button
+    ├── Copy Button
+    └── Delete Button
+```
+
+#### 卡片状态
+
+| 状态 | 边框 | 阴影 | 其他 |
+|------|------|------|------|
+| 默认 | border-2 border-transparent | 无 | cursor-pointer |
+| 悬停 | border-slate-200 | shadow-md | - |
+| 选中 | border-indigo-500 | shadow-lg shadow-indigo-500/20 | - |
+
+#### 内部元素规范
+
+**类型标签**:
+```css
+Container: inline-flex items-center gap-1.5
+Padding: px-2.5 py-1
+Background: bg-slate-100
+Border: border-slate-200
+Text: text-slate-700 text-xs
+Border radius: rounded-lg
+Icon: w-3.5 h-3.5
+```
+
+**状态标签**:
+- **固定标签**: bg-amber-50, text-amber-700, border-amber-200
+- **收藏标签**: bg-rose-50, text-rose-700, border-rose-200
+- **时间戳**: text-xs text-slate-400
+
+**备注区域**:
+```css
+Container: flex items-center gap-2
+Padding: px-3 py-2
+Background: bg-blue-50
+Border: border-blue-200
+Text: text-sm text-blue-900
+Icon: w-4 h-4 text-blue-600 flex-shrink-0
+```
+
+**内容区域**:
+- **文本**: text-slate-700 text-sm, whitespace-pre-wrap break-words font-sans
+- **图像**: max-w-xs max-h-48 rounded-lg border border-slate-200
+- **展开按钮**:
+  - 样式: inline-flex items-center gap-1, px-3 py-1.5, bg-slate-100 hover:bg-slate-200, text-slate-600, rounded-lg, text-xs
+  - 图标: ChevronDown/ChevronUp w-3.5 h-3.5
+  - 文本: "展开全部 (X 字符)" / "收起"
+  - 触发条件: 内容超过 200 字符
+
+**操作按钮**:
+```css
+基础样式: p-2, rounded-lg, transition-all duration-200
+图标: w-4 h-4
+
+/* 按钮状态映射 */
+Pin按钮:
+  - 未固定: bg-slate-100 text-slate-600 hover:bg-amber-50 hover:text-amber-600
+  - 已固定: bg-amber-100 text-amber-700 hover:bg-amber-200
+
+Favorite按钮:
+  - 未收藏: bg-slate-100 text-slate-600 hover:bg-rose-50 hover:text-rose-600
+  - 已收藏: bg-rose-100 text-rose-600 hover:bg-rose-200
+
+Note按钮:
+  - 无备注: bg-slate-100 text-slate-600 hover:bg-blue-50 hover:text-blue-600
+  - 有备注: bg-blue-100 text-blue-600 hover:bg-blue-200
+
+Copy按钮:
+  - bg-slate-100 text-slate-600 hover:bg-green-50 hover:text-green-600
+
+Delete按钮:
+  - bg-slate-100 text-slate-600 hover:bg-red-50 hover:text-red-600
+```
+
+#### 交互规范
+- **单击**: 选中项目（选中索引 +1）
+- **双击**: 复制内容到剪贴板
+- **按钮点击**: e.stopPropagation() 阻止冒泡
+- **展开按钮**: 切换 isExpanded 状态，不触发选中
+
+### 5. NoteModal 组件
+
+#### 结构
+```
+Modal Overlay (fixed inset-0)
+└── Modal Container
+    ├── Header
+    │   ├── Title: "编辑备注"
+    │   └── Close Button (X icon)
+    ├── Textarea
+    └── Footer
+        ├── Cancel Button
+        └── Save Button
+```
+
+#### 视觉规范
+- **遮罩**: bg-black/50, flex items-center justify-center, z-50, p-4
+- **容器**: bg-white, rounded-2xl, shadow-2xl, max-w-lg w-full, p-6
+- **标题**: text-slate-800, 默认大小
+- **关闭按钮**: p-2, hover:bg-slate-100, rounded-lg
+- **文本框**: w-full h-32, px-4 py-3, bg-slate-50, border border-slate-200, rounded-xl, resize-none
+  - 聚焦: focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400
+- **取消按钮**: px-4 py-2, bg-slate-100 text-slate-600 hover:bg-slate-200, rounded-xl
+- **保存按钮**: flex items-center gap-2, px-4 py-2, bg-gradient-to-br from-indigo-500 to-purple-600 text-white, rounded-xl, shadow-lg shadow-indigo-500/30
+  - 悬停: hover:from-indigo-600 hover:to-purple-700
+
+#### 交互规范
+- **打开**: 自动聚焦 textarea
+- **快捷键**:
+  - Esc: 关闭 Modal
+  - Ctrl/Cmd+Enter: 保存
+- **保存**: 更新项目备注，关闭 Modal，显示成功提示
+
+---
+
+## ⌨️ 交互规范
+
+### 1. 键盘快捷键系统
+
+| 快捷键 | 功能 | 作用域 | 说明 |
+|--------|------|--------|------|
+| **Ctrl/Cmd+F** | 聚焦搜索框 | 全局 | 阻止浏览器默认搜索 |
+| **↑** | 上一项 | 列表 | 最小值为 0 |
+| **↓** | 下一项 | 列表 | 最大值为列表长度-1 |
+| **←** | 上一个分类 | 全局 | 循环到第一个 |
+| **→** | 下一个分类 | 全局 | 循环到最后一个 |
+| **Enter** | 复制当前项 | 列表 | 复制到系统剪贴板 |
+| **Delete** | 删除当前项 | 列表 | 显示删除成功提示 |
+| **E** | 编辑备注 | 列表 | 打开备注编辑 Modal |
+| **Alt+P** | 切换固定 | 列表 | 显示固定/取消固定提示 |
+| **Alt+F** | 切换收藏 | 列表 | 显示收藏/取消收藏提示 |
+| **Esc** | 关闭 Modal | Modal | 取消编辑 |
+| **Ctrl/Cmd+Enter** | 保存备注 | Modal | 保存并关闭 |
+
+**实现要点**:
+- 在输入框（input/textarea）内时，跳过快捷键（除 Ctrl+F）
+- 使用 `e.preventDefault()` 阻止默认行为
+- 使用 `e.stopPropagation()` 阻止事件冒泡
+
+### 2. 鼠标交互
+
+| 操作 | 元素 | 反馈 | 说明 |
+|------|------|------|------|
+| **单击** | 卡片 | 选中状态（蓝色边框） | 更新 selectedIndex |
+| **双击** | 卡片 | Toast提示 "已复制" | 复制内容 |
+| **单击** | 操作按钮 | 状态变化 + Toast | 阻止冒泡 |
+| **单击** | 展开按钮 | 内容展开/收起 | 阻止冒泡，不触发选中 |
+| **悬停** | 卡片 | 边框 + 阴影 | 视觉反馈 |
+| **悬停** | 按钮 | 背景色变化 | 色系对应功能 |
+
+### 3. 自动行为
+
+| 行为 | 触发条件 | 说明 |
+|------|----------|------|
+| **自动同步** | 每 3 秒 | 检测剪贴板变化（实际环境需要系统权限） |
+| **去重逻辑** | 添加新项 | 如果内容相同，更新时间戳而不是新增 |
+| **自动滚动** | 键盘导航 | 选中项滚动到视野内（smooth behavior） |
+| **索引重置** | 分类/搜索变化 | 重置 selectedIndex 为 0 |
+| **自动聚焦** | 打开 Modal | textarea 自动获得焦点 |
+
+### 4. 状态持久化
+
+```javascript
+// 保存到 localStorage
+保存时机: items 状态变化时
+存储键: 'clipboardItems'
+序列化: JSON.stringify
+反序列化: JSON.parse + 日期对象处理
+
+// 数据结构
+{
+  id: string,
+  type: 'text' | 'image',
+  content: string,
+  timestamp: Date,
+  note?: string,
+  isFavorite: boolean,
+  isPinned: boolean,
+  favoriteTime?: Date
+}
+```
+
+### 5. 排序逻辑
+
+```
+排序优先级:
+1. 固定项置顶 (isPinned: true)
+2. 在"收藏"分类中，按收藏时间倒序 (favoriteTime DESC)
+3. 其他情况按更新时间倒序 (timestamp DESC)
+```
+
+---
+
+## 📱 响应式设计
+
+### 容器宽度
+```css
+Container: max-w-5xl mx-auto px-4
+  - 最大宽度: 1024px
+  - 居中对齐
+  - 左右内边距: 16px
+```
+
+### 断点建议
+虽然当前设计为桌面优先，但可以考虑以下响应式调整：
+
+| 断点 | 屏幕宽度 | 调整建议 |
+|------|----------|----------|
+| **sm** | 640px+ | 保持当前设计 |
+| **md** | 768px+ | 保持当前设计 |
+| **lg** | 1024px+ | 保持当前设计 |
+| **< sm** | < 640px | • 分类标签改为下拉选择<br>• 操作按钮改为底部抽屉<br>• 隐藏部分状态标签 |
+
+---
+
+## 🎯 用户体验设计原则
+
+### 1. 效率至上
+- **键盘优先**: 所有操作都可通过键盘完成
+- **快速访问**: 常用功能（复制、删除）一键触达
+- **智能去重**: 避免重复内容，只更新时间戳
+- **自动同步**: 无需手动刷新，后台自动检测
+
+### 2. 信息架构清晰
+- **三级筛选**: 分类 → 搜索 → 列表
+- **状态可见**: 通过标签和图标清晰展示项目状态
+- **时间感知**: 显示相对时间（"5分钟前"）而非绝对时间
+
+### 3. 渐进式披露
+- **长内容折叠**: 默认显示 200 字符，按需展开
+- **次要功能隐藏**: 快捷键帮助面板可折叠
+- **操作按钮悬显**: 只在必要时显示操作按钮（移动端适配）
+
+### 4. 即时反馈
+- **Toast通知**: 所有操作都有确认提示
+- **视觉变化**: 状态改变立即反映在界面上
+- **过渡动画**: 200ms 的平滑过渡，快速但不突兀
+
+### 5. 容错设计
+- **可逆操作**: 删除后显示提示（未来可添加撤销功能）
+- **数据持久化**: 自动保存到 localStorage，防止数据丢失
+- **最大限制**: 保留 200 条记录，自动清理旧内容
+
+---
+
+## 🔔 通知系统
+
+### Toast 规范
+
+使用 Sonner 库实现通知系统：
+
+```javascript
+// 成功提示
+toast.success('消息内容')
+  - 使用场景: 复制成功、保存成功、删除成功、清空成功
+  - 位置: top-center
+  - 持续时间: 默认（约3秒）
+
+// 状态提示
+toast.success('已固定') / toast.success('已取消固定')
+toast.success('已收藏') / toast.success('已取消收藏')
+  - 使用场景: 状态切换操作
+  - 显示当前状态结果
+```
+
+### Toast 触发时机
+
+| 操作 | 提示内容 | 类型 |
+|------|----------|------|
+| 复制 | "已复制到剪贴板" | success |
+| 删除 | "已删除" | success |
+| 清空 | "已清空所有记录" | success |
+| 保存备注 | "备注已保存" | success |
+| 切换固定 | "已固定" / "已取消固定" | success |
+| 切换收藏 | "已收藏" / "已取消收藏" | success |
+
+---
+
+## 🛠 开发实现要点
+
+### 1. 组件化策略
+```
+/App.tsx                    # 主应用，状态管理
+/components/
+  ├── Header.tsx            # 顶部栏
+  ├── CategoryTabs.tsx      # 分类标签
+  ├── SearchBar.tsx         # 搜索框
+  ├── ClipboardList.tsx     # 列表容器
+  ├── ClipboardItem.tsx     # 单个卡片
+  └── NoteModal.tsx         # 备注编辑弹窗
+```
+
+### 2. 状态管理
+```typescript
+// 主要状态
+items: ClipboardItem[]           // 所有剪贴板项
+category: CategoryFilter         // 当前分类
+searchQuery: string              // 搜索关键字
+selectedIndex: number            // 键盘选中索引
+editingNote: string | null       // 正在编辑的项目 ID
+
+// 计算状态
+filteredItems                    // 筛选 + 排序后的列表
+```
+
+### 3. 性能优化建议
+- 使用 `useCallback` 包裹事件处理函数
+- 使用 `useRef` 存储 DOM 引用，避免不必要的查询
+- 合理使用 `React.memo` 防止不必要的重渲染
+- `localStorage` 操作使用 `useEffect` 副作用
+
+### 4. 可访问性
+- 所有按钮添加 `title` 属性
+- 使用语义化 HTML 元素
+- 键盘导航友好
+- 颜色对比度符合 WCAG AA 标准（至少 4.5:1）
+
+### 5. 扩展点
+- **图片处理**: 当前使用 base64，可扩展为 blob URL 或云存储
+- **同步机制**: 当前为模拟，可接入系统剪贴板 API
+- **撤销功能**: 可添加操作历史栈
+- **分组功能**: 可添加自定义分组/标签
+- **导出功能**: 可导出为 JSON/CSV
+
+---
+
+## 📐 设计检查清单
+
+### 视觉一致性
+- [ ] 所有圆角使用 xl (12px) 或 2xl (16px)
+- [ ] 所有过渡时间为 200ms
+- [ ] 颜色使用符合语义化规范
+- [ ] 间距符合 4px 基准体系
+- [ ] 阴影仅在必要时使用
+
+### 交互一致性
+- [ ] 所有按钮有悬停效果
+- [ ] 所有操作有即时反馈
+- [ ] 键盘快捷键全部实现
+- [ ] 焦点状态清晰可见
+- [ ] 选中状态明确标识
+
+### 功能完整性
+- [ ] 添加、删除、编辑功能正常
+- [ ] 搜索、筛选功能正常
+- [ ] 固定、收藏功能正常
+- [ ] 数据持久化功能正常
+- [ ] 去重逻辑正确实现
+
+### 用户体验
+- [ ] 长内容可展开查看
+- [ ] 快捷键帮助易于访问
+- [ ] 空状态有友好提示
+- [ ] 操作不可逆时有确认
+- [ ] 错误状态有清晰提示
+
+---
+
+## 📝 更新日志
+
+### Version 1.0.0
+- ✅ 初始设计完成
+- ✅ 完整的键盘快捷键系统
+- ✅ 分类筛选与搜索功能
+- ✅ 固定、收藏、备注功能
+- ✅ 长内容展开/收起功能
+- ✅ 数据持久化到 localStorage
+- ✅ Toast 通知系统集成
+
+---
+
+## 🎓 设计资源
+
+### 参考文档
+- [Tailwind CSS v4.0 文档](https://tailwindcss.com/docs)
+- [Lucide React 图标库](https://lucide.dev/)
+- [Sonner Toast 库](https://sonner.emilkowal.ski/)
+
+### 设计工具
+- Figma: 原型设计
+- Figma Make: 代码生成
+
+### 色彩参考
+- Tailwind 官方色板
+- Material Design 色彩系统
+
+---
+
+## 👥 团队协作建议
+
+### 设计师
+1. 遵循本文档的颜色和间距系统
+2. 新增功能前先考虑与现有设计的一致性
+3. 注意保持信息密度的平衡
+4. 设计时考虑键盘操作场景
+
+### 开发者
+1. 严格遵循 Tailwind 类名规范
+2. 不要使用内联样式（除非是动态计算的值）
+3. 保持组件的单一职责
+4. 注意性能优化，避免不必要的渲染
+5. 测试键盘快捷键的兼容性
+
+### 测试人员
+1. 重点测试键盘导航流程
+2. 验证数据持久化逻辑
+3. 检查边界情况（空列表、超长内容等）
+4. 测试不同分类和搜索条件的组合
+
+---
+
+**文档维护者**: UI Design Team  
+**最后更新**: 2024-11-28  
+**文档状态**: ✅ 已完成
+

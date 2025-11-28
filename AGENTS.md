@@ -18,6 +18,7 @@
 - 格式化：遵循编辑器默认的 Prettier/Volar 规则；命名清晰、早返回，避免冗长分支。
 - 注释：关键逻辑与与 uTools 交互处需写明输入/输出、异常处理，保持“所有代码需要有详细注释”的标准。
 - 使用中文回复, 所有代码都需要有详细注释
+- 开发时可以参考 [uTools的开发者文档](https://www.u-tools.cn/docs/developer/docs.html)
 
 ## 测试指引
 - 推荐 Vitest + Vue Test Utils，命名 `*.spec.ts` 与组件同目录存放。
