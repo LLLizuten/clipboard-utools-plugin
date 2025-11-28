@@ -615,21 +615,6 @@ function toggleExpand(id: string) {
 <template>
   <div class="clipboard-page">
     <div class="clipboard-shell">
-      <section class="headline-card">
-        <div class="headline-left">
-          <div class="logo-mark">CL</div>
-          <div class="headline-text">
-            <div class="headline-title">剪贴板管理器</div>
-            <div class="headline-subtitle">共 {{ items.length }} 条记录 · 自动同步中</div>
-          </div>
-        </div>
-        <div class="headline-actions">
-          <button class="btn ghost" :disabled="isCapturing" @click="captureClipboard()">
-            {{ isCapturing ? '读取中…' : '记录当前剪贴板' }}
-          </button>
-        </div>
-      </section>
-
       <section class="controls-row">
         <div class="category-tabs">
           <button
@@ -682,11 +667,6 @@ function toggleExpand(id: string) {
           />
         </label>
       </section>
-
-      <div class="status-line">
-        <span v-if="statusMsg" class="status ok">{{ statusMsg }}</span>
-        <span v-if="errorMsg" class="status err">{{ errorMsg }}</span>
-      </div>
 
       <section class="content-grid">
         <div class="list-panel" v-if="filteredItems.length">
