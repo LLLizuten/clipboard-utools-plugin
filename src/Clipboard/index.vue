@@ -33,6 +33,8 @@ const errorMsg = ref('')
 const isCapturing = ref(false)
 const lastHash = ref<string | null>(null)
 let pollTimer: number | null = null
+// 标记可见性监听是否已绑定，防止重复添加事件
+let visibilityListenerBound = false
 
 const filteredItems = computed(() => {
   let list = [...items.value]
@@ -95,18 +97,54 @@ watch(selectedId, () => {
 
 onMounted(() => {
   captureClipboard(true)
-  pollTimer = window.setInterval(() => {
-    captureClipboard(true)
-  }, 500)
+  startPolling()
+  bindVisibilityListener()
   window.addEventListener('keydown', handleKeydown)
 })
 
 onBeforeUnmount(() => {
-  if (pollTimer) {
-    clearInterval(pollTimer)
-  }
+  stopPolling()
+  unbindVisibilityListener()
   window.removeEventListener('keydown', handleKeydown)
 })
+
+// 根据页面可见性启停轮询，避免窗口隐藏后仍高频读取剪贴板
+function bindVisibilityListener() {
+  if (visibilityListenerBound || typeof document === 'undefined') return
+  const handler = () => {
+    if (document.visibilityState === 'visible') {
+      startPolling()
+    } else {
+      stopPolling()
+    }
+  }
+  document.addEventListener('visibilitychange', handler)
+  ;(bindVisibilityListener as any)._handler = handler
+  visibilityListenerBound = true
+}
+
+function unbindVisibilityListener() {
+  if (!visibilityListenerBound || typeof document === 'undefined') return
+  const handler = (bindVisibilityListener as any)._handler as (() => void) | undefined
+  if (handler) {
+    document.removeEventListener('visibilitychange', handler)
+  }
+  visibilityListenerBound = false
+}
+
+function startPolling() {
+  if (pollTimer || typeof window === 'undefined') return
+  pollTimer = window.setInterval(() => {
+    captureClipboard(true)
+  }, 500)
+}
+
+function stopPolling() {
+  if (pollTimer) {
+    clearInterval(pollTimer)
+    pollTimer = null
+  }
+}
 
 function loadItems(): ClipEntry[] {
   const raw =
@@ -137,6 +175,7 @@ function persistItems(list: ClipEntry[]) {
     ;(window as any)?.utools?.dbStorage?.setItem(STORAGE_KEY, serialized)
   } catch (err) {
     console.warn('utools dbStorage setItem failed', err)
+    ;(window as any)?.utools?.showNotification?.('保存剪贴板数据失败（dbStorage），请检查空间或权限')
   }
   try {
     if (typeof localStorage !== 'undefined') {
@@ -144,6 +183,7 @@ function persistItems(list: ClipEntry[]) {
     }
   } catch (err) {
     console.warn('localStorage setItem failed', err)
+    ;(window as any)?.utools?.showNotification?.('保存剪贴板数据失败（localStorage），请检查浏览器权限或空间')
   }
 }
 
@@ -204,7 +244,7 @@ async function captureClipboard(silent = false) {
     isCapturing.value = true
   }
   try {
-    const entry = await readClipboard()
+    const entry = await readClipboard(silent)
     if (!entry) {
       if (!silent) {
         errorMsg.value = '未获取到剪贴板内容'
@@ -231,7 +271,7 @@ async function captureClipboard(silent = false) {
 // 2) 若 uTools 不可用，则使用标准 Clipboard API 的 read()：遍历条目，优先 image/png，再读取 text/plain；
 // 3) 最后退回到 readText() 兜底，只拿纯文本；
 // 4) 所有步骤失败则返回 null，调用方据此显示提示，不会抛出异常影响轮询。
-async function readClipboard(): Promise<{ type: ClipType; content: string } | null> {
+async function readClipboard(silent = false): Promise<{ type: ClipType; content: string } | null> {
   const utoolsApi = (window as any)?.utools
   try {
     if (utoolsApi?.readImage) {
@@ -248,6 +288,11 @@ async function readClipboard(): Promise<{ type: ClipType; content: string } | nu
     }
   } catch (err) {
     console.warn('utools clipboard read failed', err)
+  }
+
+  // 静默轮询时若页面未聚焦，跳过标准 Clipboard API，避免权限提示或拒绝频繁出现
+  if (silent && typeof document !== 'undefined' && !document.hasFocus()) {
+    return null
   }
 
   if (navigator?.clipboard?.read) {
@@ -324,6 +369,7 @@ async function copyItem(item: ClipEntry, shouldExit = false) {
     }
   } catch (err: any) {
     errorMsg.value = err?.message ?? '复制失败'
+    ;(window as any)?.utools?.showNotification?.(`复制失败：${errorMsg.value}`)
   }
 }
 
