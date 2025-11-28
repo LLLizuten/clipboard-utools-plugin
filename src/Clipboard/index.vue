@@ -412,7 +412,7 @@ function handleKeydown(event: KeyboardEvent) {
   } else if (event.key === 'ArrowDown') {
     moveSelection(1)
     event.preventDefault()
-  } else if (event.key === 'Enter') {
+  } else if (event.key === 'Enter' || (event.ctrlKey && keyLower === 'c')) {
     if (selectedItem.value) {
       copyItem(selectedItem.value, true)
       event.preventDefault()
