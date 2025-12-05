@@ -41,6 +41,8 @@ const lastHash = ref<string | null>(null)
 let pollTimer: number | null = null
 // 标记可见性监听是否已绑定，防止重复添加事件
 let visibilityListenerBound = false
+// 标记是否已绑定 onPluginEnter，用于每次打开插件重置页签
+let pluginEnterListenerBound = false
 
 const filteredItems = computed(() => {
   let list = [...items.value]
@@ -71,6 +73,14 @@ const filteredItems = computed(() => {
 const selectedItem = computed(
   () => filteredItems.value.find((item) => item.id === selectedId.value) ?? filteredItems.value[0] ?? null
 )
+
+// 存储页签按钮引用，便于切换视图时同步焦点，保证焦点高亮跟随
+const tabRefs = ref<Record<'all' | 'text' | 'image' | 'favorites', HTMLButtonElement | null>>({
+  all: null,
+  text: null,
+  image: null,
+  favorites: null
+})
 
 watch(
   items,
@@ -103,11 +113,18 @@ watch(selectedId, () => {
   scrollSelectedIntoView()
 })
 
+watch(viewType, () => {
+  // 视图切换后同步焦点到当前页签，确保高亮（系统默认黄色描边）跟随
+  focusActiveTab()
+})
+
 onMounted(() => {
   captureClipboard(true)
   startPolling()
   // 默认开启后台监听，依赖 preload 暴露的 electron.clipboard
   initBackgroundWatcher()
+  // 绑定 uTools 入口事件，保证每次打开插件时回到“全部”页签
+  bindPluginEnterReset()
   bindVisibilityListener()
   window.addEventListener('keydown', handleKeydown)
 })
@@ -118,6 +135,18 @@ onBeforeUnmount(() => {
   unbindVisibilityListener()
   window.removeEventListener('keydown', handleKeydown)
 })
+
+// 每次通过 uTools 打开插件时重置页签到“全部”
+function bindPluginEnterReset() {
+  if (pluginEnterListenerBound) return
+  const utoolsApi = (window as any)?.utools
+  if (utoolsApi?.onPluginEnter) {
+    utoolsApi.onPluginEnter(() => {
+      viewType.value = 'all'
+    })
+    pluginEnterListenerBound = true
+  }
+}
 
 // 初始化并启动后台轮询，未支持时给出提示
 async function initBackgroundWatcher() {
@@ -598,6 +627,21 @@ function setTextRef(id: string, el: HTMLElement | null) {
   }
 }
 
+// 记录页签按钮引用
+function setTabRef(type: 'all' | 'text' | 'image' | 'favorites', el: HTMLButtonElement | null) {
+  tabRefs.value[type] = el
+}
+
+// 将焦点移至当前激活的页签，保证键盘切换时焦点高亮同步
+function focusActiveTab() {
+  nextTick(() => {
+    const el = tabRefs.value[viewType.value]
+    if (el && typeof el.focus === 'function') {
+      el.focus()
+    }
+  })
+}
+
 function scrollSelectedIntoView() {
   nextTick(() => {
     const id = selectedId.value
@@ -655,6 +699,7 @@ function toggleExpand(id: string) {
           <button
             class="tab-chip"
             :class="{ active: viewType === 'all' }"
+            :ref="(el) => setTabRef('all', el as HTMLButtonElement | null)"
             @click="viewType = 'all'"
           >
             <span class="chip-icon">▦</span>
@@ -664,6 +709,7 @@ function toggleExpand(id: string) {
           <button
             class="tab-chip"
             :class="{ active: viewType === 'text' }"
+            :ref="(el) => setTabRef('text', el as HTMLButtonElement | null)"
             @click="viewType = 'text'"
           >
             <span class="chip-icon">文</span>
@@ -673,6 +719,7 @@ function toggleExpand(id: string) {
           <button
             class="tab-chip"
             :class="{ active: viewType === 'image' }"
+            :ref="(el) => setTabRef('image', el as HTMLButtonElement | null)"
             @click="viewType = 'image'"
           >
             <span class="chip-icon">图</span>
@@ -682,6 +729,7 @@ function toggleExpand(id: string) {
           <button
             class="tab-chip"
             :class="{ active: viewType === 'favorites' }"
+            :ref="(el) => setTabRef('favorites', el as HTMLButtonElement | null)"
             @click="viewType = 'favorites'"
             title="仅显示收藏"
           >

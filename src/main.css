@@ -184,6 +184,12 @@ button {
   box-shadow: var(--card-shadow-strong);
 }
 
+.tab-chip:focus,
+.tab-chip:focus-visible {
+  outline: 2px solid var(--amber-200);
+  outline-offset: 2px;
+}
+
 .chip-icon {
   font-weight: 700;
   font-size: 12px;
