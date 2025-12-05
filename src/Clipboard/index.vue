@@ -106,21 +106,49 @@ watch(selectedId, () => {
 onMounted(() => {
   captureClipboard(true)
   startPolling()
+  // 默认开启后台监听，依赖 preload 暴露的 electron.clipboard
+  initBackgroundWatcher()
   bindVisibilityListener()
   window.addEventListener('keydown', handleKeydown)
 })
 
 onBeforeUnmount(() => {
   stopPolling()
+  stopBackgroundWatcher()
   unbindVisibilityListener()
   window.removeEventListener('keydown', handleKeydown)
 })
+
+// 初始化并启动后台轮询，未支持时给出提示
+async function initBackgroundWatcher() {
+  const services = (window as any)?.services
+  if (!services?.startClipboardWatcher || !services?.stopClipboardWatcher) {
+    return
+  }
+  try {
+    await services.startClipboardWatcher()
+  } catch (err: any) {
+    ;(window as any)?.utools?.showNotification?.(`后台监听失败`)
+  }
+}
+
+// 组件销毁或需要主动停止时调用，释放定时器
+function stopBackgroundWatcher() {
+  const services = (window as any)?.services
+  try {
+    services?.stopClipboardWatcher?.()
+  } catch (err) {
+    console.warn('stopClipboardWatcher failed', err)
+  }
+}
 
 // 根据页面可见性启停轮询，避免窗口隐藏后仍高频读取剪贴板
 function bindVisibilityListener() {
   if (visibilityListenerBound || typeof document === 'undefined') return
   const handler = () => {
     if (document.visibilityState === 'visible') {
+      // 页面再次可见时从存储同步一次，确保后台轮询期间新增的条目也能展示
+      items.value = loadItems()
       startPolling()
     } else {
       stopPolling()
