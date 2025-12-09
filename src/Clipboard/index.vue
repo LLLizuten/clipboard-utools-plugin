@@ -409,7 +409,8 @@ function blobToDataUrl(blob: Blob): Promise<string> {
   })
 }
 
-async function copyItem(item: ClipEntry, shouldExit = false) {
+// 复制后统一隐藏主窗口，但不退出插件，方便继续后台监听
+async function copyItem(item: ClipEntry) {
   const utoolsApi = (window as any)?.utools
   try {
     if (item.type === 'text') {
@@ -430,13 +431,10 @@ async function copyItem(item: ClipEntry, shouldExit = false) {
         await navigator.clipboard.write([clipboardItem])
       }
     }
-    statusMsg.value = '已复制'
-    if (shouldExit) {
-      if (utoolsApi?.hideMainWindow) {
-        utoolsApi.hideMainWindow()
-      } else if (utoolsApi?.outPlugin) {
-        utoolsApi.outPlugin()
-      }
+    statusMsg.value = '已复制，窗口已隐藏'
+    // 仅隐藏主窗口，不调用 outPlugin，保持插件存活以便后台监听
+    if (utoolsApi?.hideMainWindow) {
+      utoolsApi.hideMainWindow()
     }
   } catch (err: any) {
     errorMsg.value = err?.message ?? '复制失败'
@@ -478,7 +476,7 @@ function handleKeydown(event: KeyboardEvent) {
     event.preventDefault()
   } else if (event.key === 'Enter' || (event.ctrlKey && keyLower === 'c')) {
     if (selectedItem.value) {
-      copyItem(selectedItem.value, true)
+      copyItem(selectedItem.value)
       event.preventDefault()
     }
   } else if (event.key === 'ArrowLeft') {
@@ -766,7 +764,7 @@ function toggleExpand(id: string) {
             }"
             :ref="(el) => setItemRef(item.id, el)"
             @click="selectedId = item.id"
-            @dblclick.stop="copyItem(item, true)"
+            @dblclick.stop="copyItem(item)"
           >
             <div class="card-head">
               <div class="tag type">
