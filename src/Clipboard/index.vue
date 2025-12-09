@@ -17,6 +17,10 @@ interface ClipEntry {
 
 const STORAGE_KEY = 'clipboard_items'
 const MAX_ITEMS = 200
+// 本地数据库文档前缀，便于使用 allDocs 前缀筛选批量读写
+const CLIP_DOC_PREFIX = 'clip:'
+// 本地数据库 _rev 缓存，更新时携带版本可避免冲突；需在加载 items 前初始化
+const dbRevCache: Record<string, string> = {}
 // 文本卡片默认截断长度与行数上限，超出后提供“展开全部”交互
 const TEXT_PREVIEW_LIMIT = 240
 const TEXT_PREVIEW_LINES = 6
@@ -212,6 +216,59 @@ function stopPolling() {
 }
 
 function loadItems(): ClipEntry[] {
+  // 优先从本地数据库读取（多文档拆分，不受单文档 1M 限制）
+  const dbItems = loadFromLocalDb()
+  if (dbItems.length) return dbItems
+
+  // 数据库为空时尝试读取旧存储（dbStorage/localStorage），便于迁移历史数据
+  const legacy = loadLegacyItems()
+  if (legacy.length) {
+    persistItemsToLocalDb(legacy)
+  }
+  return legacy
+}
+
+function persistItems(list: ClipEntry[]) {
+  const limited = list.slice(0, MAX_ITEMS)
+  // 1) 本地数据库：拆文档存储，避免再触发 1M 限制
+  persistItemsToLocalDb(limited)
+  // 2) 浏览器预览场景兜底：localStorage 仅用于调试，不再写入 dbStorage 以规避容量上限
+  persistItemsToLocalStorage(limited)
+}
+
+// 从本地数据库读取剪贴板条目；若当前环境无 utools.db 则返回空数组
+function loadFromLocalDb(): ClipEntry[] {
+  const db = (window as any)?.utools?.db
+  if (!db?.allDocs) return []
+  try {
+    const docs = db.allDocs(CLIP_DOC_PREFIX) ?? []
+    return docs
+      .filter((doc: any) => doc?._id?.startsWith(CLIP_DOC_PREFIX) && doc?.content)
+      .map((doc: any) => {
+        const id = doc._id.slice(CLIP_DOC_PREFIX.length)
+        if (doc._rev) dbRevCache[doc._id] = doc._rev
+        return {
+          id,
+          type: doc.type,
+          content: doc.content,
+          createdAt: doc.createdAt,
+          updatedAt: doc.updatedAt,
+          pinned: !!doc.pinned,
+          favorited: !!doc.favorited,
+          favoriteNote: doc.favoriteNote,
+          favoritedAt: doc.favoritedAt
+        } as ClipEntry
+      })
+      .filter((item) => item.id && item.content)
+      .slice(0, MAX_ITEMS)
+  } catch (err) {
+    console.warn('loadFromLocalDb failed', err)
+    return []
+  }
+}
+
+// 读取旧版存储（dbStorage/localStorage），用于迁移或浏览器预览
+function loadLegacyItems(): ClipEntry[] {
   const raw =
     (window as any)?.utools?.dbStorage?.getItem(STORAGE_KEY) ??
     (typeof localStorage !== 'undefined' ? localStorage.getItem(STORAGE_KEY) : null)
@@ -229,26 +286,74 @@ function loadItems(): ClipEntry[] {
         .slice(0, MAX_ITEMS)
     }
   } catch (err) {
-    console.warn('Failed to parse clipboard cache', err)
+    console.warn('Failed to parse legacy clipboard cache', err)
   }
   return []
 }
 
-function persistItems(list: ClipEntry[]) {
-  const serialized = JSON.stringify(list.slice(0, MAX_ITEMS))
+// 写入本地数据库：按文档拆分保存，带上 _rev 避免冲突；不再写入 dbStorage
+function persistItemsToLocalDb(list: ClipEntry[]) {
+  const db = (window as any)?.utools?.db
+  if (!db?.allDocs || !db?.put) return
   try {
-    ;(window as any)?.utools?.dbStorage?.setItem(STORAGE_KEY, serialized)
+    const existing = db.allDocs(CLIP_DOC_PREFIX) ?? []
+    const existingMap = new Map<string, any>()
+    existing.forEach((doc: any) => {
+      existingMap.set(doc._id, doc)
+      if (doc._rev) dbRevCache[doc._id] = doc._rev
+    })
+
+    const targetIds = new Set(list.map((item) => `${CLIP_DOC_PREFIX}${item.id}`))
+    // 删除多余文档，保持列表与 UI 一致
+    existing.forEach((doc: any) => {
+      if (!targetIds.has(doc._id)) {
+        try {
+          db.remove(doc)
+        } catch (err) {
+          console.warn('remove stale doc failed', err)
+        }
+        delete dbRevCache[doc._id]
+      }
+    })
+
+    // 逐条 upsert，携带 _rev 避免冲突；冲突则删除后重试一次
+    list.forEach((item) => {
+      const docId = `${CLIP_DOC_PREFIX}${item.id}`
+      const baseDoc: any = {
+        _id: docId,
+        ...item
+      }
+      const cachedRev = dbRevCache[docId] || existingMap.get(docId)?._rev
+      if (cachedRev) baseDoc._rev = cachedRev
+      const res = db.put(baseDoc)
+      if (res?.ok && res?.rev) {
+        dbRevCache[docId] = res.rev
+      } else if (res?.error) {
+        try {
+          db.remove(docId)
+          const retry = db.put({ _id: docId, ...item })
+          if (retry?.ok && retry?.rev) {
+            dbRevCache[docId] = retry.rev
+          }
+        } catch (err) {
+          console.warn('persist retry failed', err)
+        }
+      }
+    })
   } catch (err) {
-    console.warn('utools dbStorage setItem failed', err)
-    ;(window as any)?.utools?.showNotification?.('保存剪贴板数据失败（dbStorage），请检查空间或权限')
+    console.warn('persistItemsToLocalDb failed', err)
+    ;(window as any)?.utools?.showNotification?.('保存剪贴板数据失败（本地数据库）')
   }
+}
+
+// 浏览器预览兜底：仅写 localStorage，避免再命中 dbStorage 1M 限制
+function persistItemsToLocalStorage(list: ClipEntry[]) {
   try {
     if (typeof localStorage !== 'undefined') {
-      localStorage.setItem(STORAGE_KEY, serialized)
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(list))
     }
   } catch (err) {
     console.warn('localStorage setItem failed', err)
-    ;(window as any)?.utools?.showNotification?.('保存剪贴板数据失败（localStorage），请检查浏览器权限或空间')
   }
 }
 

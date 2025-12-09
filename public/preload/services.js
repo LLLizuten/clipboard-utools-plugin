@@ -6,14 +6,16 @@ const EMPTY_PIXEL = nativeImage.createFromDataURL(
   'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMB/3tVZ9sAAAAASUVORK5CYII='
 )
 
-// 剪贴板缓存键与上限（保持与前端一致，便于共享数据）
-const STORAGE_KEY = 'clipboard_items'
+// 剪贴板文档前缀与上限（保持与前端一致，便于共享数据）
+const CLIP_DOC_PREFIX = 'clip:'
 const MAX_ITEMS = 200
 // 后台轮询间隔，毫秒
 const POLL_INTERVAL = 500
 // 轮询定时器句柄与最近一次内容哈希，避免重复写入
 let watcherTimer = null
 let lastHash = null
+// 本地数据库 _rev 缓存，更新文档时携带版本可避免冲突
+const dbRevCache = {}
 
 // 通过 window 对象向渲染进程注入 nodejs 能力
 window.services = {
@@ -161,24 +163,32 @@ function captureAndPersistClipboard () {
 
 // 读取已存储的数据（优先 utools.dbStorage）
 function loadStoredItems () {
-  const raw = global.utools?.dbStorage?.getItem(STORAGE_KEY)
-  if (!raw) return []
+  const db = global.utools?.db
+  if (!db?.allDocs) return []
   try {
-    const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw
-    if (Array.isArray(parsed)) {
-      return parsed
-        .filter((item) => item?.id && item?.content)
-        .map((item) => ({
-          pinned: false,
-          favorited: false,
-          ...item
-        }))
-        .slice(0, MAX_ITEMS)
-    }
+    const docs = db.allDocs(CLIP_DOC_PREFIX) ?? []
+    return docs
+      .filter((doc) => doc?._id?.startsWith(CLIP_DOC_PREFIX) && doc?.content)
+      .map((doc) => {
+        if (doc._rev) dbRevCache[doc._id] = doc._rev
+        return {
+          id: doc._id.slice(CLIP_DOC_PREFIX.length),
+          type: doc.type,
+          content: doc.content,
+          createdAt: doc.createdAt,
+          updatedAt: doc.updatedAt,
+          pinned: !!doc.pinned,
+          favorited: !!doc.favorited,
+          favoriteNote: doc.favoriteNote,
+          favoritedAt: doc.favoritedAt
+        }
+      })
+      .filter((item) => item.id && item.content)
+      .slice(0, MAX_ITEMS)
   } catch (err) {
-    console.warn('loadStoredItems parse failed', err)
+    console.warn('loadStoredItems from local db failed', err)
+    return []
   }
-  return []
 }
 
 // 按固定/收藏优先裁剪列表，保持上限
@@ -195,8 +205,50 @@ function compactItems (list) {
 
 // 写入存储
 function persistItems (list) {
+  const db = global.utools?.db
+  if (!db?.allDocs || !db?.put) return
   try {
-    global.utools?.dbStorage?.setItem(STORAGE_KEY, JSON.stringify(list))
+    const existing = db.allDocs(CLIP_DOC_PREFIX) ?? []
+    const existingMap = new Map()
+    existing.forEach((doc) => {
+      existingMap.set(doc._id, doc)
+      if (doc._rev) dbRevCache[doc._id] = doc._rev
+    })
+
+    const targetIds = new Set(list.map((item) => `${CLIP_DOC_PREFIX}${item.id}`))
+    // 删除多余文档
+    existing.forEach((doc) => {
+      if (!targetIds.has(doc._id)) {
+        try {
+          db.remove(doc)
+        } catch (err) {
+          console.warn('remove stale doc failed', err)
+        }
+        delete dbRevCache[doc._id]
+      }
+    })
+
+    // upsert 当前列表
+    list.forEach((item) => {
+      const docId = `${CLIP_DOC_PREFIX}${item.id}`
+      const baseDoc = { _id: docId, ...item }
+      const cachedRev = dbRevCache[docId] || existingMap.get(docId)?._rev
+      if (cachedRev) baseDoc._rev = cachedRev
+      const res = db.put(baseDoc)
+      if (res?.ok && res?.rev) {
+        dbRevCache[docId] = res.rev
+      } else if (res?.error) {
+        try {
+          db.remove(docId)
+          const retry = db.put({ _id: docId, ...item })
+          if (retry?.ok && retry?.rev) {
+            dbRevCache[docId] = retry.rev
+          }
+        } catch (err) {
+          console.warn('persist retry failed', err)
+        }
+      }
+    })
   } catch (err) {
     console.warn('persistItems failed', err)
   }
