@@ -30,6 +30,8 @@ const searchText = ref('')
 const searchInputRef = ref<HTMLInputElement | null>(null)
 const viewType = ref<'all' | 'text' | 'image' | 'favorites'>('all')
 const selectedId = ref<string | null>(items.value[0]?.id ?? null)
+// 列表滚动容器引用，复制成功后需要将滚动条回到顶部，便于下次打开即定位最新条目
+const listPanelRef = ref<HTMLDivElement | null>(null)
 const itemRefs = ref<Record<string, HTMLElement | null>>({})
 const previewTextRef = ref<HTMLElement | null>(null)
 const textRefs = ref<Record<string, HTMLElement | null>>({})
@@ -541,6 +543,8 @@ async function copyItem(item: ClipEntry) {
     if (utoolsApi?.hideMainWindow) {
       utoolsApi.hideMainWindow()
     }
+    // 复制后自动将滚动条回到顶部，保证再次查看时从最新条目开始
+    scrollListToTop()
   } catch (err: any) {
     errorMsg.value = err?.message ?? '复制失败'
     ;(window as any)?.utools?.showNotification?.(`复制失败：${errorMsg.value}`)
@@ -756,6 +760,21 @@ function scrollSelectedIntoView() {
   })
 }
 
+// 将列表或页面滚动到顶部，复制后调用，避免用户回到界面时仍停留在旧位置（无动画，立刻定位）
+function scrollListToTop() {
+  nextTick(() => {
+    const panel = listPanelRef.value
+    if (panel) {
+      // 直接写 scrollTop，确保立刻复位，不使用平滑动画
+      panel.scrollTop = 0
+    }
+    // 无论是否存在单独容器，都同步重置窗口滚动，避免因主窗口滚动导致位置残留
+    if (typeof window !== 'undefined') {
+      window.scrollTo({ top: 0, behavior: 'auto' })
+    }
+  })
+}
+
 function removeItem(id: string) {
   items.value = items.value.filter((item) => item.id !== id)
   delete textRefs.value[id]
@@ -855,7 +874,7 @@ function toggleExpand(id: string) {
       </section>
 
       <section class="content-grid">
-        <div class="list-panel" v-if="filteredItems.length">
+        <div class="list-panel" v-if="filteredItems.length" ref="listPanelRef">
           <div
             v-for="item in filteredItems"
             :key="item.id"
